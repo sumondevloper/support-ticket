@@ -1,5 +1,4 @@
 "use client";
-
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -38,7 +37,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 
-/* ---------------- API FUNCTIONS ---------------- */
 
 const fetchTicket = async (id: string) => {
   const res = await fetch("/api/tickets/get-by-id", {
@@ -56,37 +54,63 @@ const fetchTicket = async (id: string) => {
   return res.json();
 };
 
-const updateTicket = async ({
+export const updateTicket = async ({
   id,
   data,
 }: {
   id: string;
-  data: UpdateTicketInput;
+  data: Partial<UpdateTicketInput>; // Partial because PATCH usually updates some fields
 }) => {
-  const res = await fetch(`/api/tickets/${id}`, {  // ← এখানে id দিয়ে
+  if (!id) throw new Error("Ticket ID is required");
+
+  const res = await fetch(`/api/tickets/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data), // ← id আর body-তে পাঠানোর দরকার নেই
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+    cache: "no-store", // Ensures fresh data in Next.js (important!)
   });
 
   let responseData;
   try {
     responseData = await res.json();
-  } catch (e) {
-    responseData = null;
+  } catch {
+    responseData = { error: "Invalid response from server" };
   }
 
   if (!res.ok) {
-    throw new Error(responseData?.error || `Update failed (${res.status})`);
+    throw new Error(
+      responseData?.error || responseData?.details || `Update failed (${res.status})`
+    );
   }
 
-  return responseData;
+  // API returns { ticket: { ... } } → we return just the ticket
+  return responseData.ticket;
 };
 
-const deleteTicket = async (id: string) => {
-  const res = await fetch(`/api/tickets/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Delete failed");
-  return res.json();
+export const deleteTicket = async (id: string) => {
+  if (!id) throw new Error("Ticket ID is required");
+
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: "DELETE",
+    cache: "no-store", 
+  });
+
+  let responseData;
+  try {
+    responseData = await res.json();
+  } catch {
+    responseData = { error: "Invalid response from server" };
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      responseData?.error || responseData?.details || "Delete failed"
+    );
+  }
+
+  return responseData; 
 };
 
 /* ---------------- PAGE ---------------- */
