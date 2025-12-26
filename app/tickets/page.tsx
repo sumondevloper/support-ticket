@@ -156,7 +156,7 @@ const getPriorityColor = (priority: number) => {
         </div>
         <Link href="/tickets/new">
           <Button size="lg" className="bg-black text-white rounded-lg px-6 py-3">
-+ Create Ticket</Button>
++ &nbsp; New Ticket</Button>
         </Link>
       </div>
 

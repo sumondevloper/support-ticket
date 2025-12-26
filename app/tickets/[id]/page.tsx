@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { AlertTriangle, CalendarDays, ChevronLeft, SquarePen, Trash, Users } from "lucide-react";
+import Loading from "./loading";
 
 
 const fetchTicket = async (id: string) => {
@@ -48,7 +49,6 @@ const fetchTicket = async (id: string) => {
 
   return res.json();
 };
-
 export const updateTicket = async ({
   id,
   data,
@@ -82,7 +82,6 @@ export const updateTicket = async ({
 
   return responseData.ticket;
 };
-
 export const deleteTicket = async (id: string) => {
   if (!id) throw new Error("Ticket ID is required");
 
@@ -106,17 +105,11 @@ export const deleteTicket = async (id: string) => {
 
   return responseData; 
 };
-
-
 export default function TicketDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-
-  // ✅ SAFELY extract id
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
     queryFn: () => fetchTicket(id),
@@ -124,8 +117,6 @@ export default function TicketDetailsPage() {
   });
 
   const ticket = data?.ticket;
-
-
   const updateMutation = useMutation({
     mutationFn: (data: UpdateTicketInput) =>
       updateTicket({ id, data }),
@@ -136,8 +127,6 @@ export default function TicketDetailsPage() {
     },
     onError: () => toast.error("Update failed"),
   });
-
-
   const deleteMutation = useMutation({
     mutationFn: () => deleteTicket(id),
     onSuccess: () => {
@@ -147,7 +136,6 @@ export default function TicketDetailsPage() {
     },
     onError: () => toast.error("Delete failed"),
   });
-
 
   const {
     register,
@@ -173,7 +161,7 @@ export default function TicketDetailsPage() {
 
 
   if (isLoading) {
-    return <div className="container py-10">Loading...</div>;
+    return <Loading/>;
   }
 
   if (isError || !ticket) {
@@ -230,88 +218,129 @@ return (
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-        <Button size="icon" variant="outline" 
-        className="border-gray-300 hover:border-gray-400">       
-           <SquarePen size={14}/>
-              </Button>
-            </DialogTrigger>
-            {/* EDIT DIALOG (unchanged logic) */}
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Ticket</DialogTitle>
-              </DialogHeader>
+<Dialog>
+  <DialogTrigger asChild>
+    <Button
+      size="icon"
+      variant="outline"
+      className="border-gray-300 hover:border-gray-400"
+    >
+      <SquarePen size={14} />
+    </Button>
+  </DialogTrigger>
 
-              <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
-                <div>
-                  <Label>Title</Label>
-                  <Input {...register("title")} />
-                </div>
+  <DialogContent className="max-w-2xl rounded-lg p-4">
+    {/* HEADER */}
+    <DialogHeader className="space-y-0.5">
+      <DialogTitle className="text-base font-semibold">
+        Edit Ticket
+      </DialogTitle>
+      <p className="text-xs text-muted-foreground">
+        Update the ticket details below
+      </p>
+    </DialogHeader>
 
-                <div>
-                  <Label>Description</Label>
-                  <Textarea rows={5} {...register("description")} />
-                </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-3">
+      <div className="space-y-0.5">
+        <Label className="text-[13px]">Title</Label>
+        <Input
+          {...register("title")}
+          className="bg-[#f5f5f5] h-9 text-[12px] text-gray-500 placeholder:text-gray-400"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Provide a clear and concise title (5–80 characters)
+        </p>
+      </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Status</Label>
-                    <Select
-                      defaultValue={ticket.status}
-                      onValueChange={(v) =>
-                        setValue("status", v as any)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <div className="space-y-0.5">
+        <Label className="text-[13px]">Description</Label>
+        <Textarea
+          rows={3}
+          {...register("description")}
+          className="bg-[#f5f5f5] min-h-[72px] text-[12px] text-gray-500 placeholder:text-gray-400"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Provide detailed information about the issue (min 20 characters)
+        </p>
+      </div>
 
-                  <div>
-                    <Label>Priority</Label>
-                    <Select
-                      defaultValue={ticket.priority.toString()}
-                      onValueChange={(v) =>
-                        setValue("priority", Number(v))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5].map((p) => (
-                          <SelectItem key={p} value={p.toString()}>
-                            {p}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+      {/* STATUS + PRIORITY */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-0.5">
+          <Label className="text-[13px]">Status</Label>
+          <Select
+            defaultValue={ticket.status}
+            onValueChange={(v) => setValue("status", v as any)}
+          >
+            <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-                <div>
-                  <Label>Assignee</Label>
-                  <Input {...register("assignee")} />
-                </div>
+        <div className="space-y-0.5">
+          <Label className="text-[13px]">Priority</Label>
+          <Select
+            defaultValue={ticket.priority.toString()}
+            onValueChange={(v) => setValue("priority", Number(v))}
+          >
+            <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 - Very Low</SelectItem>
+              <SelectItem value="2">2 - Low</SelectItem>
+              <SelectItem value="3">3 - Medium</SelectItem>
+              <SelectItem value="4">4 - High</SelectItem>
+              <SelectItem value="5">5 - Critical</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-                <DialogFooter>
-                  <Button type="submit">Save</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+      {/* ASSIGNEE */}
+      <div className="space-y-0.5">
+        <Label className="text-[13px]">Assignee (Optional)</Label>
+      <Input
+  {...register("assignee")}
+  className="bg-[#f5f5f5] h-9 text-[12px] text-gray-500 placeholder:text-gray-400"
+/>
+
+        <p className="text-[11px] text-muted-foreground">
+          Leave empty if not assigned yet
+        </p>
+      </div>
+
+      {/* FOOTER */}
+      <div className="flex gap-3 pt-1">
+        <Button
+          type="submit"
+          className="bg-black text-white hover:bg-black h-9 px-4"
+        >
+          Update Ticket
+        </Button>
+
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-none h-9 px-4"
+          >
+            Cancel
+          </Button>
+        </DialogTrigger>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
+
+
 
           <Dialog>
             <DialogTrigger asChild>
@@ -336,6 +365,9 @@ return (
             </DialogContent>
           </Dialog>
         </div>
+
+
+
       </div>
 
       {/* Divider */}

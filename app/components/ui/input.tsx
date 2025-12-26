@@ -4,14 +4,17 @@ import { cn } from "../../lib/utils";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
-  search?: boolean; // show search icon
-  width?: string | number; // NEW: dynamic width prop
+  search?: boolean;
+  width?: string | number;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, search = false, placeholder, width, style, ...props }, ref) => {
+  (
+    { className, type, search = false, placeholder, width, style, ...props },
+    ref
+  ) => {
     return (
-      <div className="relative" style={{ width: width || '100%' }}>
+      <div className="relative" style={{ width: width || "100%" }}>
         {search && (
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         )}
@@ -21,14 +24,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           placeholder={placeholder}
           className={cn(
-            "flex h-10 rounded-md w-full", // Keep w-full for input to fill container
-            "bg-[#f5f5f5] text-sm", // smoky white
+            "flex h-10 w-full rounded-md",
+            "bg-[#f5f5f5] text-sm",
             "px-3 py-2",
-            search && "pl-9", // space for search icon
+            search && "pl-9",
             "placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "border-none outline-none",
+            "focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            "border-none",
             className
           )}
           style={style}
