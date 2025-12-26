@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -26,7 +25,6 @@ import {
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-/* ---------------- ZOD SCHEMA ---------------- */
 
 export const createTicketSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(80, "Title must be at most 80 characters"),
@@ -38,7 +36,6 @@ export const createTicketSchema = z.object({
 
 export type CreateTicketForm = z.infer<typeof createTicketSchema>;
 
-/* ---------------- PAGE ---------------- */
 
 export default function NewTicketPage() {
   const router = useRouter();
@@ -56,7 +53,6 @@ export default function NewTicketPage() {
     },
   });
 
-  /* ---------------- SUBMIT ---------------- */
 
   const onSubmit = async (data: CreateTicketForm) => {
     setError(null);
@@ -86,28 +82,26 @@ export default function NewTicketPage() {
     }
   };
 
-  /* ---------------- UI ---------------- */
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      <div className="mb-6">
-        <Link href="/tickets" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-          <ChevronLeft size={18} className="text-gray-500" />
-          Back to Tickets
-        </Link>
-      </div>
+    <div className="w-[85%] mx-auto py-10 px-4">
+<div className="mb-6 flex items-center gap-2">
+  <Link
+    href="/tickets"
+    className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+  >
+    <ChevronLeft size={20} className="text-gray-500" />
+  </Link>
+    <span className="text-xl font-semibold">Create New Ticket</span>
+</div>
+
+
 
       <Card className="border border-gray-200 rounded-lg shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-semibold">
-            Create New Ticket
-          </CardTitle>
-        </CardHeader>
-
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Title */}
-            <div className="space-y-1">
+            <div className="space-y-1 mt-5">
               <Label className="text-sm font-medium">Title</Label>
               <Input
                 placeholder="Enter ticket title"
@@ -139,7 +133,6 @@ export default function NewTicketPage() {
               </p>
             </div>
 
-            {/* Status & Priority */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
                 <Label className="text-sm font-medium">Status</Label>
@@ -184,7 +177,6 @@ export default function NewTicketPage() {
               </div>
             </div>
 
-            {/* Assignee */}
             <div className="space-y-1">
               <Label className="text-sm font-medium">Assignee (Optional)</Label>
               <Input
@@ -200,12 +192,10 @@ export default function NewTicketPage() {
               </p>
             </div>
 
-            {/* Error */}
             {error && (
               <p className="text-sm text-red-500">{error}</p>
             )}
 
-            {/* Actions */}
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"

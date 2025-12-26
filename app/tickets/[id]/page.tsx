@@ -96,6 +96,7 @@ export default function TicketDetailsPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
@@ -157,17 +158,18 @@ export default function TicketDetailsPage() {
   const currentStatus = statusConfig[ticket.status] || { label: "Unknown", color: "bg-gray-400" };
 
   return (
-    <div className="container max-w-5xl mx-auto py-10 px-4">
-      {/* Back */}
-      <div className="mb-6">
-        <Link href="/tickets" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-          <ChevronLeft size={18} className="text-gray-500" />
-          Back to Tickets
+    <div className="w-[85%] mx-auto py-10 px-4">
+      <div className="mb-6 flex items-center gap-3">
+        <Link
+          href="/tickets"
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ChevronLeft size={20} className="text-gray-500" />
         </Link>
+        <span className="text-xl font-semibold">Ticket Details</span>
       </div>
 
       <div className="border border-gray-200 rounded-lg bg-white p-6">
-        {/* Header */}
         <div className="flex justify-between items-start">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
@@ -177,7 +179,6 @@ export default function TicketDetailsPage() {
               </Badge>
             </div>
 
-            {/* Meta row */}
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-1 text-gray-400">
                 <AlertTriangle size={14} className={getPriorityColor(ticket.priority)} />
@@ -206,24 +207,23 @@ export default function TicketDetailsPage() {
               <DialogContent className="max-w-2xl rounded-lg p-4">
                 <DialogHeader className="space-y-0.5">
                   <DialogTitle className="text-base font-semibold">Edit Ticket</DialogTitle>
+                 <p className="text-[12px] text-gray-600">Update the ticket details below</p>
+
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-3">
-                  {/* Title */}
+                <form onSubmit={handleSubmit(onSubmit)}>
                   <div className="space-y-0.5">
                     <Label className="text-[13px]">Title</Label>
                     <Input {...register("title")} className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" placeholder="Enter ticket title" />
-                    <p className="text-[11px] text-muted-foreground py-2.5">Provide a clear and concise title (5–80 characters)</p>
+                    <p className="text-[11px] text-muted-foreground pb-2.5 pt-1.5">Provide a clear and concise title (5–80 characters)</p>
                   </div>
 
-                  {/* Description */}
                   <div className="space-y-0.5">
                     <Label className="text-[13px]">Description</Label>
                     <Textarea {...register("description")} rows={3} className="bg-[#f5f5f5] min-h-[72px] text-[13px] text-gray-800 placeholder:text-gray-600" placeholder="Describe the issue in detail" />
-                    <p className="text-[11px] text-muted-foreground py-2.5">Provide detailed information about the issue</p>
+                    <p className="text-[11px] text-muted-foreground pb-2.5 pt-1.5">Provide detailed information about the issue (min 20 characters)</p>
                   </div>
 
-                  {/* Status & Priority */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-0.5">
                       <Label className="text-[13px]">Status</Label>
@@ -253,14 +253,12 @@ export default function TicketDetailsPage() {
                     </div>
                   </div>
 
-                  {/* Assignee */}
-                  <div className="space-y-0.5">
+                  <div className="pt-2.5">
                     <Label className="text-[13px]">Assignee (Optional)</Label>
                     <Input {...register("assignee")} placeholder="Assignee a team member" className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" />
-                    <p className="text-[11px] text-muted-foreground py-2.5">Leave empty if not assigned yet</p>
+                    <p className="text-[11px] text-muted-foreground pt-1.5 pb-3.5">Leave empty if not assigned yet</p>
                   </div>
 
-                  {/* Buttons */}
                   <div className="flex gap-3 pt-1">
                     <Button type="submit" disabled={updateMutation.isPending} className="bg-black text-white hover:bg-black h-9 px-4">
                       {updateMutation.isPending ? "Updating..." : "Update Ticket"}
@@ -272,7 +270,7 @@ export default function TicketDetailsPage() {
             </Dialog>
 
             {/* Delete Dialog */}
-            <Dialog>
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="outline" className="border-gray-300 hover:border-gray-300">
                   <Trash size={14} className="text-red-500" />
@@ -282,25 +280,22 @@ export default function TicketDetailsPage() {
                 <DialogHeader>
                   <DialogTitle>Delete ticket?</DialogTitle>
                 </DialogHeader>
-                <p>This action cannot be undone.</p>
-                <DialogFooter>
-                  <Button>Cancel</Button>
+                <p className="py-2">This action cannot be undone.</p>
+                <DialogFooter className="flex gap-2">
+                  <Button  onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
                   <Button variant="destructive" onClick={() => deleteMutation.mutate()} className="bg-black text-white hover:bg-black/90">Delete</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
           </div>
         </div>
 
-        <div className="border-t my-6" />
-
-        {/* Description */}
-        <div className="space-y-2">
+        <div className="space-y-2 my-6">
           <h3 className="font-medium">Description</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed py-2">{ticket.description || "No description provided."}</p>
         </div>
 
-        {/* Info grid */}
         <div className="grid grid-cols-2 gap-6 mt-6 text-sm">
           <div>
             <p className="text-[13px] text-gray-600">Status</p>

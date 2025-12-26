@@ -25,7 +25,7 @@ import {
 import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
 import { Ticket } from "../types";
-import { toast } from "sonner"; // toast notifications
+import { toast } from "sonner"; 
 
 const fetchTickets = async ({
   pageParam = 1,
@@ -89,23 +89,19 @@ export default function TicketsPage() {
 
   const rawTickets: Ticket[] = data?.pages.flatMap((p) => p.tickets) ?? [];
 
-  // ---------------- Filtering & Sorting ----------------
   const filteredTickets = useMemo(() => {
     let temp = [...rawTickets];
 
-    // Filter by search
     if (debouncedSearch) {
       temp = temp.filter((t) =>
         t.title.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
 
-    // Filter by status
     if (statusFilter) {
       temp = temp.filter((t) => t.status === statusFilter);
     }
 
-    // Sort by createdAt
     temp.sort((a, b) => {
       if (sortOrder === "asc") {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -159,11 +155,10 @@ export default function TicketsPage() {
     debouncedSearch !== "" || statusFilter !== "" || sortOrder !== "desc";
 
   return (
-    <div className="container mx-auto max-w-7xl py-10">
-      {/* Header */}
+    <div className="w-[85%] mx-auto py-10 px-4">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Support Tickets</h1>
+          <h2 className="text-2xl font-bold">Support Tickets</h2>
           <p className="mt-2.5 text-muted-foreground">
             {isLoading
               ? "Loading..."
@@ -177,7 +172,6 @@ export default function TicketsPage() {
         </Link>
       </div>
 
-      {/* Controls */}
       <div className="flex items-end gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -232,7 +226,6 @@ export default function TicketsPage() {
         </Button>
       </div>
 
-      {/* Loading Skeleton */}
       {isLoading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
@@ -241,7 +234,6 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {/* Error State */}
       {isError && (
         <div className="text-center py-20">
           <p className="text-red-500 mb-4">
@@ -251,7 +243,6 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && !isError && filteredTickets.length === 0 && (
         <div className="text-center py-20">
           <p className="text-muted-foreground text-lg mb-4">
@@ -262,7 +253,6 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {/* Tickets List */}
       <div className="flex flex-col gap-4 w-full">
         {filteredTickets.map((ticket) => (
           <Link

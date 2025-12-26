@@ -5,7 +5,6 @@ import { createTicketSchema } from "../../schemas/ticket-schema";
 export async function GET() {
   try {
     const client = await clientPromise;
-    console.log(client)
     const db = client.db("test");
 
     const tickets = await db
@@ -16,7 +15,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data: tickets });
 
   } catch (error) {
-    console.error("❌ API Error:", error);
+    console.error(" API Error:", error);
 
     return NextResponse.json(
       { success: false, error: "Failed to fetch tickets" },
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("❌ POST /api/tickets ERROR:", error);
+    console.error("POST /api/tickets ERROR:", error);
 
     return NextResponse.json(
       {
