@@ -257,7 +257,6 @@ export default function TicketDetailsPage() {
   };
   const currentStatus = statusConfig[ticket.status] || { label: "Unknown", color: "bg-gray-400" };
 
-  // Watch current form values for debugging
   const formValues = watch();
 
   return (
