@@ -9,4 +9,5 @@ export type Ticket = {
   createdAt: string;            
   updatedAt: string;           
   assignee?: string;
+  
 };

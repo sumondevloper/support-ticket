@@ -37,12 +37,10 @@ export async function POST(req: NextRequest) {
     const client = await clientPromise;
     const db = client.db("test");
 
-    // Try as ObjectId first
     let ticket = await db.collection("tickets").findOne({
       _id: new ObjectId(id),
     });
 
-    // If not found as ObjectId, try as string (flexible for your current data)
     if (!ticket) {
       ticket = await db.collection("tickets").findOne({
         _id: id,
@@ -106,7 +104,6 @@ export async function PATCH(
     const client = await clientPromise;
     const db = client.db("test");
 
-    // Always use ObjectId for MongoDB queries
     const result = await db.collection("tickets").findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $set: { ...body, updatedAt: new Date() } },
@@ -122,7 +119,6 @@ export async function PATCH(
     );
   }
 }
-
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -133,13 +129,11 @@ export async function DELETE(
     const client = await clientPromise;
     const db = client.db("test");
 
-    // Try deleting with string _id first
     let result = await db.collection("tickets").findOneAndDelete({
       _id: id,
     });
 
 
-    // If not found, try ObjectId
     if (!result) {
       result = await db.collection("tickets").findOneAndDelete({
         _id: new ObjectId(id),

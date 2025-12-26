@@ -107,7 +107,7 @@ export default function NewTicketPage() {
                 onChange={(e) =>
                   setForm({ ...form, title: e.target.value })
                 }
-                className="bg-gray-50"
+                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
                 required
               />
               <p className="text-xs text-gray-400">
@@ -125,7 +125,7 @@ export default function NewTicketPage() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                className="bg-gray-50 resize-none"
+                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
                 required
               />
               <p className="text-xs text-gray-400">
@@ -190,7 +190,7 @@ export default function NewTicketPage() {
                 onChange={(e) =>
                   setForm({ ...form, assignee: e.target.value })
                 }
-                className="bg-gray-50"
+                      className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
               />
               <p className="text-xs text-gray-400">
                 Leave empty if not assigned yet

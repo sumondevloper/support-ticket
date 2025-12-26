@@ -12,7 +12,7 @@ const baseTicketSchema = z.object({
     .optional()
     .default(""),
 
-  status: z.enum(["open", "in_progress", "resolved"], {
+  status: z.enum(["open", "in_progress", "resolved","close"], {
     message: "Status must be one of: open, in_progress, resolved",
   }),
 
@@ -24,25 +24,21 @@ const baseTicketSchema = z.object({
 
   assignee: z
     .string()
-    .min(2, { message: "Assignee name must be at least 2 characters" })
-    .optional()
-    .nullable() 
+    .optional()          
+    .nullable()          
+    .transform((val) => (val === "" ? null : val)) 
     .default(null),
 });
 
-export const createTicketSchema = baseTicketSchema.refine(
-  (data) => data.assignee !== null || true,
-  { path: ["assignee"], message: "Invalid assignee" }
-);
+export const createTicketSchema = baseTicketSchema;
 
-export const updateTicketSchema = baseTicketSchema.partial().extend({
-  status: baseTicketSchema.shape.status.optional(),
-  priority: baseTicketSchema.shape.priority.optional(),
+export const updateTicketSchema = baseTicketSchema.partial({
+}).extend({
   assignee: z
     .string()
-    .min(2)
+    .optional()
     .nullable()
-    .optional(),
+    .default(null),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;

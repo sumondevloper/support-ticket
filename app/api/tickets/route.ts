@@ -1,7 +1,6 @@
 import clientPromise from "../../lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { createTicketSchema } from "../../schemas/ticket-schema";
-import { nanoid } from "nanoid";
 
 export async function GET() {
   try {
@@ -14,7 +13,6 @@ export async function GET() {
       .find({})
       .toArray();
 
-    // 4️⃣ return response
     return NextResponse.json({ success: true, data: tickets });
 
   } catch (error) {
@@ -26,8 +24,6 @@ export async function GET() {
     );
   }
 }
-
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -39,10 +35,10 @@ export async function POST(req: NextRequest) {
 
     const newTicket = {
       title: data.title,
-      description: data.description ?? "", // Safe fallback if undefined
+      description: data.description ?? "", 
       status: data.status,
       priority: data.priority,
-      assignee: data.assignee ?? null,     // null if not provided
+      assignee: data.assignee ?? null,     
       createdAt: new Date(),
       updatedAt: new Date(),
     };
