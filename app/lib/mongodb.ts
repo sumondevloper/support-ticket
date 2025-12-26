@@ -1,13 +1,6 @@
 import { MongoClient } from "mongodb";
 
-const username = process.env.MONGO_USERNAME;
-const password = process.env.MONGO_PASSWORD;
-
-if (!username || !password) {
-  throw new Error("Missing MongoDB credentials in environment variables");
-}
-
-const uri = `mongodb+srv://${username}:${password}@cluster0.6liakct.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = process.env.MONGODB_URI as string; // Type assertion
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
