@@ -1,11 +1,8 @@
-// lib/mongodb.ts - COMPLETE PRODUCTION READY
 import { MongoClient, MongoClientOptions } from "mongodb";
 
-// Get MongoDB URI from environment variables
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "test";
 
-// Validate environment variable
 if (!MONGODB_URI) {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
@@ -16,15 +13,12 @@ if (!MONGODB_URI) {
       '3. Value: mongodb+srv://username:password@cluster.mongodb.net/dbname'
     );
   } else {
-    // Development fallback
     console.warn('⚠️ MONGODB_URI not found. Using local MongoDB for development.');
   }
 }
 
-// Use environment variable or local fallback
 const uri = MONGODB_URI || "mongodb://127.0.0.1:27017";
 
-// MongoDB connection options
 const options: MongoClientOptions = {
   maxPoolSize: 10,
   minPoolSize: 1,
@@ -33,9 +27,7 @@ const options: MongoClientOptions = {
   connectTimeoutMS: 10000,
 };
 
-// TypeScript global declaration
 declare global {
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
@@ -43,7 +35,6 @@ let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === "development") {
-  // In development, use global variable for Hot Module Replacement
   if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
     global._mongoClientPromise = client.connect()
@@ -70,7 +61,6 @@ if (process.env.NODE_ENV === "development") {
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  // In production, create new connection
   client = new MongoClient(uri, options);
   clientPromise = client.connect()
     .then((connectedClient) => {
@@ -84,10 +74,8 @@ if (process.env.NODE_ENV === "development") {
     });
 }
 
-// Export the connection promise
 export default clientPromise;
 
-// Helper function to get database instance
 export async function getDatabase(dbName?: string) {
   try {
     const client = await clientPromise;
@@ -98,13 +86,11 @@ export async function getDatabase(dbName?: string) {
   }
 }
 
-// Helper function to get collection
 export async function getCollection(collectionName: string, dbName?: string) {
   const db = await getDatabase(dbName);
   return db.collection(collectionName);
 }
 
-// Helper function to check connection status
 export async function checkConnection() {
   try {
     const client = await clientPromise;

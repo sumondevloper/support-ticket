@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 
+export const runtime = "nodejs";
+
+
 async function getObjectId(params: Promise<{ id: string }>) {
   const { id } = await params;
   if (!id) throw new Error("Ticket ID is missing");
@@ -23,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
     const ticket = await db.collection("tickets").findOne({
       _id: new ObjectId(id),
     });
@@ -63,7 +66,7 @@ export async function PATCH(
     }
 
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
 
     const result = await db.collection("tickets").findOneAndUpdate(
       { _id: id },
@@ -95,7 +98,7 @@ export async function DELETE(
     const id = await getObjectId(params);
 
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
 
     const result = await db.collection("tickets").findOneAndDelete({
       _id: id,
@@ -126,7 +129,7 @@ export async function GET(
     const id = await getObjectId(params);
 
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
     const ticket = await db.collection("tickets").findOne({
       _id: id,
     });
@@ -135,7 +138,10 @@ export async function GET(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ ticket }, { status: 200 });
+    return NextResponse.json({  ticket: {
+    ...ticket,
+    _id: ticket._id.toString(),
+  } }, { status: 200 });
   } catch (error: any) {
     console.error("GET error:", error);
     const status = error.message.includes("missing") || error.message.includes("format") ? 400 : 500;

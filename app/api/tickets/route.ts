@@ -2,10 +2,12 @@ import clientPromise from "../../lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { createTicketSchema } from "../../schemas/ticket-schema";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
 
     const tickets = await db
       .collection("tickets")
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
     const data = createTicketSchema.parse(body);
 
     const client = await clientPromise;
-    const db = client.db("test");
+    const db = client.db();
 
 
     const newTicket = {
