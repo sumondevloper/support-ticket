@@ -4,10 +4,14 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-
+import { Search, Filter, ArrowUpDown, X } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
+import {
+  Users,
+  AlertTriangle,
+  CalendarDays,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -129,65 +133,93 @@ export default function TicketsPage() {
     setSortOrder("desc");
   };
 
+
+  const statusStyles: Record<string, string> = {
+  open: "bg-blue-100 text-blue-700",
+  in_progress: "bg-yellow-100 text-yellow-700",
+  resolved: "bg-green-100 text-green-700",
+};
+
+const getPriorityColor = (priority: number) => {
+  if (priority >= 4) return "text-red-500";
+  if (priority >= 2) return "text-yellow-500";
+  return "text-muted-foreground";
+};
   /* ---------------- UI ---------------- */
 
   return (
     <div className="container mx-auto max-w-7xl py-10">
       <div className="flex justify-between items-center mb-8">
+        <div>
         <h1 className="text-4xl font-bold">Support Tickets</h1>
+       <p  className="mt-2.5">{tickets.length} Tickets</p> 
+        </div>
         <Link href="/tickets/new">
-          <Button size="lg">Create Ticket</Button>
+          <Button size="lg" className="bg-black text-white rounded-lg px-6 py-3">
++ Create Ticket</Button>
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div>
-          <Label>Search</Label>
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title..."
-          />
-        </div>
+<div className="flex items-end gap-4 mb-6">
+  {/* Search Bar */}
+  <div className="flex-1">
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search title..."
+        className="pl-9"
+      />
+    </div>
+  </div>
 
-        <div>
-          <Label>Status</Label>
-          <Select
-            value={statusFilter || "all"}
-            onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+  {/* Status Filter - Icon in trigger */}
+  <div className="w-[180px]">
+    <Select
+      value={statusFilter || "all"}
+      onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
+    >
+      <SelectTrigger className="w-full flex items-center gap-2">
+        <Filter className="h-4 w-4" />
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        {/* Items without icons */}
+        <SelectItem value="all">All</SelectItem>
+        <SelectItem value="open">Open</SelectItem>
+        <SelectItem value="in_progress">In Progress</SelectItem>
+        <SelectItem value="resolved">Resolved</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
 
-        <div>
-          <Label>Sort</Label>
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="desc">Newest</SelectItem>
-              <SelectItem value="asc">Oldest</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+  {/* Sort - Icon in trigger */}
+  <div className="w-[150px]">
+    <Select value={sortOrder} onValueChange={setSortOrder}>
+      <SelectTrigger className="w-full flex items-center gap-2">
+        <ArrowUpDown className="h-4 w-4" />
+        <SelectValue placeholder="Sort" />
+      </SelectTrigger>
+      <SelectContent>
+        {/* Items without icons */}
+        <SelectItem value="desc">Newest</SelectItem>
+        <SelectItem value="asc">Oldest</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
 
-      {(search || statusFilter || sortOrder !== "desc") && (
-        <Button variant="outline" onClick={clearFilters} className="mb-6">
-          Clear filters
-        </Button>
-      )}
+  {/* Clear Filter Button */}
+  <Button
+    variant="outline"
+    onClick={clearFilters}
+    disabled={!search && !statusFilter && sortOrder === "desc"}
+    className="h-10 px-4 flex items-center gap-2"
+  >
+    <X className="h-4 w-4" />
+    Clear
+  </Button>
+</div>
 
       {/* Loading */}
       {isLoading && (
@@ -213,32 +245,68 @@ export default function TicketsPage() {
         </p>
       )}
 
-      {/* Tickets */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {tickets.map((ticket) => (
-          <Link href={`/tickets/${ticket._id}`} key={ticket._id}>
-            <Card className="hover:shadow-xl transition h-full cursor-pointer">
-              <CardHeader>
-                <CardTitle className="line-clamp-2">
-                  {ticket.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {ticket.description}
-                </p>
-                <div className="flex justify-between">
-                  <Badge>{ticket.status.replace("_", " ")}</Badge>
-                  <Badge variant="outline">Priority {ticket.priority}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-4">
-                  {format(new Date(ticket.createdAt), "PPP")}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+<div className="flex flex-col gap-4 w-full">
+  {tickets.map((ticket) => (
+    <Link
+      href={`/tickets/${ticket._id}`}
+      key={ticket._id}
+      className="w-full"
+    >
+      <div className="w-full border border-gray-200 rounded-[5px] bg-white hover:shadow-sm transition cursor-pointer">
+        <div className="p-5">
+          {/* Top row */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-medium text-sm">
+                {ticket.title}
+              </h3>
+
+              <p className="text-sm text-gray-400 line-clamp-2 max-w-3xl">
+                {ticket.description}
+              </p>
+            </div>
+
+            <span
+              className={`px-3 py-1 text-xs rounded-full capitalize ${statusStyles[ticket.status]}`}
+            >
+              {ticket.status.replace("_", " ")}
+            </span>
+          </div>
+
+          {/* Bottom row */}
+          <div className="flex items-center gap-6 mt-4 text-xs text-muted-foreground">
+            {/* Priority */}
+            <div className="flex items-center gap-1">
+              <AlertTriangle
+                size={14}
+                className={getPriorityColor(ticket.priority)}
+              />
+              <span>Priority {ticket.priority}</span>
+            </div>
+
+            {/* Date */}
+        <div className="flex items-center gap-1 text-gray-400">
+  <CalendarDays size={14} />
+  <span>
+    {format(new Date(ticket.createdAt), "MMM dd, yyyy")}
+  </span>
+</div>
+
+
+            {/* Users */}
+            <div className="flex items-center gap-1  text-gray-400">
+              <Users size={14} />
+              <span>3</span>
+            </div>
+          </div>
+        </div>
       </div>
+    </Link>
+  ))}
+</div>
+
+
+
 
       {/* Infinite Scroll Trigger */}
       <div ref={observerRef} className="py-10 text-center">

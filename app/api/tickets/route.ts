@@ -28,38 +28,44 @@ export async function GET() {
 }
 
 
-/* =======================
-   POST: Create ticket
-======================= */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    // ✅ validate input
     const data = createTicketSchema.parse(body);
 
     const client = await clientPromise;
-    const db = client.db("test"); // ✅ correct DB
+    const db = client.db("test");
+
 
     const newTicket = {
-      id: `TCK-${nanoid(6)}`, // ✅ custom id (NOT _id)
-      ...data,
+      title: data.title,
+      description: data.description ?? "", // Safe fallback if undefined
+      status: data.status,
+      priority: data.priority,
+      assignee: data.assignee ?? null,     // null if not provided
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     await db.collection("tickets").insertOne(newTicket);
-
     return NextResponse.json(
-      { success: true, ticket: newTicket },
+      {
+        success: true,
+        message: "Ticket created successfully",
+        ticket: newTicket,
+      },
       { status: 201 }
     );
   } catch (error: any) {
     console.error("❌ POST /api/tickets ERROR:", error);
 
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to create ticket" },
-      { status: 400 }
+      {
+        success: false,
+        error: "Failed to create ticket",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
+      { status: 500 }
     );
   }
 }
