@@ -19,7 +19,6 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
   CardTitle,
 } from "../../components/ui/card";
 import Link from "next/link";
@@ -31,7 +30,7 @@ export const createTicketSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters"),
   status: z.enum(["open", "in_progress", "resolved"]),
   priority: z.number().min(1).max(5),
-  assignee: z.string().min(2).optional(),
+  assignee: z.string().optional(),
 });
 
 export type CreateTicketForm = z.infer<typeof createTicketSchema>;
@@ -64,7 +63,7 @@ export default function NewTicketPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          assignee: data.assignee || undefined,
+          assignee: data.assignee || null,
         }),
       });
 
