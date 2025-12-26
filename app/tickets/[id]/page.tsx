@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   updateTicketSchema,
   UpdateTicketInput,
@@ -41,7 +41,7 @@ interface Ticket {
   description?: string;
   status: 'open' | 'in_progress' | 'resolved' | 'close';
   priority: number;
-  assignee?: string;
+  assignee?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +49,14 @@ interface Ticket {
 interface TicketResponse {
   ticket: Ticket;
 }
+
+// Helper function to handle assignee value
+const normalizeAssignee = (assignee: string | null | undefined): string | null => {
+  if (assignee === undefined || assignee === "") {
+    return null;
+  }
+  return assignee;
+};
 
 // fetchTicket function with proper type checking
 const fetchTicket = async (id: string | undefined): Promise<TicketResponse> => {
@@ -154,12 +162,51 @@ export default function TicketDetailsPage() {
 
   const ticket = data?.ticket;
 
+  const { 
+    register, 
+    handleSubmit, 
+    setValue, 
+    reset,
+    watch,
+    formState: { errors, isSubmitting } 
+  } = useForm<UpdateTicketInput>({
+    resolver: zodResolver(updateTicketSchema) as any,
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "open",
+      priority: 3,
+      assignee: null,
+    },
+  });
+
+  // Reset form when ticket data changes
+  useEffect(() => {
+    if (ticket) {
+      reset({
+        title: ticket.title,
+        description: ticket.description || "",
+        status: ticket.status,
+        priority: ticket.priority,
+        assignee: normalizeAssignee(ticket.assignee),
+      });
+    }
+  }, [ticket, reset]);
+
   const updateMutation = useMutation({
     mutationFn: (data: UpdateTicketInput) => {
       if (!id) {
         throw new Error("Ticket ID is required");
       }
-      return updateTicket({ id, data });
+      // Filter out undefined values
+      const updateData: Partial<UpdateTicketInput> = {};
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.status !== undefined) updateData.status = data.status;
+      if (data.priority !== undefined) updateData.priority = data.priority;
+      if (data.assignee !== undefined) updateData.assignee = data.assignee;
+      
+      return updateTicket({ id, data: updateData });
     },
     onSuccess: () => {
       toast.success("Ticket updated");
@@ -189,23 +236,9 @@ export default function TicketDetailsPage() {
     },
   });
 
-  const { 
-    register, 
-    handleSubmit, 
-    setValue, 
-    formState: { errors, isSubmitting } 
-  } = useForm<UpdateTicketInput>({
-    resolver: zodResolver(updateTicketSchema),
-    values: ticket ? {
-      title: ticket.title,
-      description: ticket.description || "",
-      status: ticket.status,
-      priority: ticket.priority,
-      assignee: ticket.assignee || "",
-    } : undefined,
-  });
-
-  const onSubmit = (data: UpdateTicketInput) => updateMutation.mutate(data);
+  const onSubmit = (data: UpdateTicketInput) => {
+    updateMutation.mutate(data);
+  };
 
   if (isLoading) return <Loading />;
   if (isError || !ticket) return <div className="container py-10">Ticket not found</div>;
@@ -223,6 +256,9 @@ export default function TicketDetailsPage() {
     close: { label: "Close", color: "bg-green-500 text-white" },
   };
   const currentStatus = statusConfig[ticket.status] || { label: "Unknown", color: "bg-gray-400" };
+
+  // Watch current form values for debugging
+  const formValues = watch();
 
   return (
     <div className="w-[85%] mx-auto py-10 px-4">
@@ -274,8 +310,7 @@ export default function TicketDetailsPage() {
               <DialogContent className="max-w-2xl rounded-lg p-4">
                 <DialogHeader className="space-y-0.5">
                   <DialogTitle className="text-base font-semibold">Edit Ticket</DialogTitle>
-                 <p className="text-[12px] text-gray-600">Update the ticket details below</p>
-
+                  <p className="text-[12px] text-gray-600">Update the ticket details below</p>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
@@ -310,7 +345,7 @@ export default function TicketDetailsPage() {
                     <div className="space-y-0.5">
                       <Label className="text-[13px]">Status</Label>
                       <Select 
-                        defaultValue={ticket.status} 
+                        value={watch("status") || "open"}
                         onValueChange={(v) => setValue("status", v as UpdateTicketInput['status'])}
                       >
                         <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
@@ -331,7 +366,7 @@ export default function TicketDetailsPage() {
                     <div className="space-y-0.5">
                       <Label className="text-[13px]">Priority</Label>
                       <Select 
-                        defaultValue={ticket.priority.toString()} 
+                        value={watch("priority")?.toString() || "3"}
                         onValueChange={(v) => setValue("priority", Number(v))}
                       >
                         <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
@@ -357,6 +392,8 @@ export default function TicketDetailsPage() {
                       {...register("assignee")} 
                       placeholder="Assignee a team member" 
                       className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" 
+                      value={watch("assignee") || ""}
+                      onChange={(e) => setValue("assignee", e.target.value || null)}
                     />
                     {errors.assignee && (
                       <p className="text-[11px] text-red-500">{errors.assignee.message}</p>
