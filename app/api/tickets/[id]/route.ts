@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "../../../lib/mongodb"; // আপনার পাথ ঠিক আছে কি না চেক করুন
+import clientPromise from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 
+// params থেকে id বের করার helper function
 async function getObjectId(params: Promise<{ id: string }>) {
   const { id } = await params;
   if (!id) throw new Error("Ticket ID is missing");
@@ -43,11 +44,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PATCH request handler - Next.js 14 App Router compatible
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> } // context ব্যবহার করুন
 ) {
   try {
+    const { params } = context;
     const id = await getObjectId(params);
 
     let body;
@@ -84,11 +87,13 @@ export async function PATCH(
   }
 }
 
+// DELETE request handler - Next.js 14 App Router compatible
 export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> } // context ব্যবহার করুন
 ) {
   try {
+    const { params } = context;
     const id = await getObjectId(params);
 
     const client = await clientPromise;
@@ -105,9 +110,40 @@ export async function DELETE(
     return NextResponse.json({ message: "Ticket deleted successfully" }, { status: 200 });
   } catch (error: any) {
     console.error("DELETE error:", error);
+    const status = error.message.includes("missing") || error.message.includes("format") ? 400 : 500;
     return NextResponse.json(
       { error: "Failed to delete ticket", details: error.message },
-      { status: error.message.includes("missing") || error.message.includes("format") ? 400 : 500 }
+      { status }
+    );
+  }
+}
+
+// Optional: GET method যোগ করতে পারেন যদি চান
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { params } = context;
+    const id = await getObjectId(params);
+
+    const client = await clientPromise;
+    const db = client.db("test");
+    const ticket = await db.collection("tickets").findOne({
+      _id: id,
+    });
+
+    if (!ticket) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ticket }, { status: 200 });
+  } catch (error: any) {
+    console.error("GET error:", error);
+    const status = error.message.includes("missing") || error.message.includes("format") ? 400 : 500;
+    return NextResponse.json(
+      { error: "Failed to fetch ticket", details: error.message },
+      { status }
     );
   }
 }
