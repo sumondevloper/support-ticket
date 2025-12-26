@@ -1,13 +1,20 @@
 "use client";
-
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useScroll } from "framer-motion";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Search, Filter, ArrowUpDown, X } from "lucide-react";
+import {
+  Search,
+  Filter,
+  ArrowUpDown,
+  X,
+  Users,
+  AlertTriangle,
+  CalendarDays,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Users, AlertTriangle, CalendarDays } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -18,10 +25,8 @@ import {
 import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
 import { Ticket } from "../types";
+import { toast } from "sonner"; // toast notifications
 
-
-
-/* ---------------- FETCH FUNCTION ---------------- */
 const fetchTickets = async ({
   pageParam = 1,
   search = "",
@@ -52,22 +57,11 @@ const fetchTickets = async ({
   };
 };
 
-/* ---------------- PAGE ---------------- */
 export default function TicketsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc");
-
-  // Debounced search to avoid too many requests
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const {
     data,
@@ -77,7 +71,7 @@ export default function TicketsPage() {
     isLoading,
     isError,
     refetch,
-    isRefetching,
+    error,
   } = useInfiniteQuery({
     queryKey: ["tickets", debouncedSearch, statusFilter, sortOrder],
     queryFn: ({ pageParam = 1 }) =>
@@ -93,29 +87,67 @@ export default function TicketsPage() {
     refetchOnWindowFocus: false,
   });
 
-  const tickets: Ticket[] = data?.pages.flatMap((page) => page.tickets) ?? [];
+  const rawTickets: Ticket[] = data?.pages.flatMap((p) => p.tickets) ?? [];
 
-  /* ---------------- INFINITE SCROLL ---------------- */
-  const observerRef = useRef<HTMLDivElement>(null);
+  // ---------------- Filtering & Sorting ----------------
+  const filteredTickets = useMemo(() => {
+    let temp = [...rawTickets];
+
+    // Filter by search
+    if (debouncedSearch) {
+      temp = temp.filter((t) =>
+        t.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
+    }
+
+    // Filter by status
+    if (statusFilter) {
+      temp = temp.filter((t) => t.status === statusFilter);
+    }
+
+    // Sort by createdAt
+    temp.sort((a, b) => {
+      if (sortOrder === "asc") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+    return temp;
+  }, [rawTickets, debouncedSearch, statusFilter, sortOrder]);
+
+  const { scrollYProgress } = useScroll();
 
   useEffect(() => {
-    if (!observerRef.current || isFetchingNextPage || !hasNextPage) return;
+    const unsubscribe = scrollYProgress.on("change", (v) => {
+      if (v > 0.9 && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage().catch(() => toast.error("Failed to load more tickets"));
+      }
+    });
+    return () => unsubscribe();
+  }, [scrollYProgress, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1, rootMargin: "100px" }
-    );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    observer.observe(observerRef.current);
+  const getPriorityColor = (priority: number) => {
+    if (priority >= 4) return "text-red-500";
+    if (priority >= 2) return "text-yellow-500";
+    return "text-muted-foreground";
+  };
 
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const statusStylesBadge: Record<string, string> = {
+    open: "bg-blue-500 text-white",
+    in_progress: "bg-yellow-500 text-white",
+    close: "bg-green-500 text-white",
+    resolved: "bg-teal-500 text-white",
+  };
 
-  /* ---------------- CLEAR FILTERS ---------------- */
   const clearFilters = useCallback(() => {
     setSearch("");
     setDebouncedSearch("");
@@ -126,54 +158,35 @@ export default function TicketsPage() {
   const hasActiveFilters =
     debouncedSearch !== "" || statusFilter !== "" || sortOrder !== "desc";
 
-  /* ---------------- STYLES ---------------- */
-  const statusStyles: Record<string, string> = {
-    open: "bg-blue-100 text-blue-700",
-    in_progress: "bg-yellow-100 text-yellow-700",
-    resolved: "bg-green-100 text-green-700",
-  };
-
-  const getPriorityColor = (priority: number) => {
-    if (priority >= 4) return "text-red-500";
-    if (priority >= 2) return "text-yellow-500";
-    return "text-muted-foreground";
-  };
-
-const statusStylesBadge: Record<string, string> = {
-  open: "bg-blue-500 text-white",           // Blue background, white text
-  in_progress: "bg-yellow-500 text-white",  // Yellow background, white text
-  close: "bg-green-500 text-white",         // Green background, white text
-  resolved: "bg-teal-500 text-white",       // Teal background, white text (as in your original)
-};
-  /* ---------------- UI ---------------- */
   return (
     <div className="container mx-auto max-w-7xl py-10">
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold">Support Tickets</h1>
           <p className="mt-2.5 text-muted-foreground">
-            {isLoading ? "Loading..." : `${tickets.length} Ticket${tickets.length !== 1 ? "s" : ""}`}
+            {isLoading
+              ? "Loading..."
+              : `${filteredTickets.length} Ticket${filteredTickets.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <Link href="/tickets/new">
           <Button size="lg" className="bg-black text-white rounded-lg px-6 py-3">
-            + New Ticket
+            + &nbsp; New Ticket
           </Button>
         </Link>
       </div>
 
-      {/* Filters */}
+      {/* Controls */}
       <div className="flex items-end gap-4 mb-6">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title..."
-              className="pl-9"
-            />
-          </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title..."
+            className="pl-9"
+          />
         </div>
 
         <div className="w-[180px]">
@@ -196,7 +209,7 @@ const statusStylesBadge: Record<string, string> = {
         </div>
 
         <div className="w-[150px]">
-          <Select value={sortOrder} onValueChange={setSortOrder}>
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as any)}>
             <SelectTrigger className="w-full flex items-center gap-2">
               <ArrowUpDown className="h-4 w-4" />
               <SelectValue placeholder="Sort" />
@@ -219,7 +232,7 @@ const statusStylesBadge: Record<string, string> = {
         </Button>
       </div>
 
-      {/* Loading State */}
+      {/* Loading Skeleton */}
       {isLoading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
@@ -231,15 +244,17 @@ const statusStylesBadge: Record<string, string> = {
       {/* Error State */}
       {isError && (
         <div className="text-center py-20">
-          <p className="text-red-500 mb-4">Failed to load tickets</p>
+          <p className="text-red-500 mb-4">
+            {error instanceof Error ? error.message : "Failed to load tickets"}
+          </p>
           <Button onClick={() => refetch()}>Retry</Button>
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && !isError && tickets.length === 0 && (
+      {!isLoading && !isError && filteredTickets.length === 0 && (
         <div className="text-center py-20">
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-4">
             {hasActiveFilters
               ? "No tickets match your filters"
               : "No tickets yet. Create your first one!"}
@@ -249,7 +264,7 @@ const statusStylesBadge: Record<string, string> = {
 
       {/* Tickets List */}
       <div className="flex flex-col gap-4 w-full">
-        {tickets.map((ticket) => (
+        {filteredTickets.map((ticket) => (
           <Link
             href={`/tickets/${ticket._id}`}
             key={ticket._id}
@@ -264,46 +279,44 @@ const statusStylesBadge: Record<string, string> = {
                   </p>
                 </div>
 
-<Badge
-  variant="secondary"
-  className={`px-3 py-1 text-xs font-medium capitalize rounded-md ${
-    statusStylesBadge[ticket.status] || "bg-gray-300 text-white"
-  }`}
->
-  {ticket.status.replace("_", " ")}
-</Badge>
+                <Badge
+                  className={`px-3 py-1 text-xs font-medium capitalize rounded-md ${
+                    statusStylesBadge[ticket.status] || "bg-gray-300 text-white"
+                  }`}
+                >
+                  {ticket.status.replace("_", " ")}
+                </Badge>
               </div>
 
               <div className="flex items-center gap-6 mt-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <AlertTriangle size={16} className={getPriorityColor(ticket.priority)} />
+                  <AlertTriangle
+                    size={16}
+                    className={getPriorityColor(ticket.priority)}
+                  />
                   <span>Priority {ticket.priority}</span>
                 </div>
-               {
-                 ticket.assignee && (
-               <div className="flex items-center gap-1.5">
-                  <Users size={16} />
-                  <span>{ticket.assignee}</span>
-                </div>
-                )
-                 }
+
+                {ticket.assignee && (
+                  <div className="flex items-center gap-1.5">
+                    <Users size={16} />
+                    <span>{ticket.assignee}</span>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-1.5">
                   <CalendarDays size={16} />
                   <span>{format(new Date(ticket.createdAt), "MMM dd, yyyy")}</span>
                 </div>
-
-               
               </div>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Infinite Scroll Trigger & Status */}
-      <div ref={observerRef} className="py-10 text-center">
-        {isFetchingNextPage && <p className="text-muted-foreground">Loading more tickets...</p>}
-        {!hasNextPage && tickets.length > 0 && !isLoading && (
-          <p className="text-muted-foreground">You've reached the end</p>
+      <div className="py-10 text-center">
+        {isFetchingNextPage && (
+          <p className="text-muted-foreground mb-2">Loading more tickets...</p>
         )}
       </div>
     </div>

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -23,15 +26,17 @@ import {
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-/* ---------------- TYPES ---------------- */
+/* ---------------- ZOD SCHEMA ---------------- */
 
-type CreateTicketPayload = {
-  title: string;
-  description: string;
-  status: "open" | "in_progress" | "resolved";
-  priority: number;
-  assignee?: string;
-};
+export const createTicketSchema = z.object({
+  title: z.string().min(5, "Title must be at least 5 characters").max(80, "Title must be at most 80 characters"),
+  description: z.string().min(20, "Description must be at least 20 characters"),
+  status: z.enum(["open", "in_progress", "resolved"]),
+  priority: z.number().min(1).max(5),
+  assignee: z.string().min(2).optional(),
+});
+
+export type CreateTicketForm = z.infer<typeof createTicketSchema>;
 
 /* ---------------- PAGE ---------------- */
 
@@ -40,18 +45,20 @@ export default function NewTicketPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<CreateTicketPayload>({
-    title: "",
-    description: "",
-    status: "open",
-    priority: 3,
-    assignee: "",
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateTicketForm>({
+    resolver: zodResolver(createTicketSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "open",
+      priority: 3,
+      assignee: "",
+    },
   });
 
   /* ---------------- SUBMIT ---------------- */
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: CreateTicketForm) => {
     setError(null);
     setLoading(true);
 
@@ -60,15 +67,15 @@ export default function NewTicketPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          assignee: form.assignee || undefined,
+          ...data,
+          assignee: data.assignee || undefined,
         }),
       });
 
-      const data = await res.json();
+      const resData = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create ticket");
+        throw new Error(resData.error || "Failed to create ticket");
       }
 
       router.push("/tickets");
@@ -84,11 +91,12 @@ export default function NewTicketPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       <div className="mb-6">
-  <Link href="/tickets" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-    <ChevronLeft size={18} className="text-gray-500" />
-    Back to Tickets
-  </Link>
-</div>
+        <Link href="/tickets" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+          <ChevronLeft size={18} className="text-gray-500" />
+          Back to Tickets
+        </Link>
+      </div>
+
       <Card className="border border-gray-200 rounded-lg shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-xl font-semibold">
@@ -97,20 +105,19 @@ export default function NewTicketPage() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Title */}
             <div className="space-y-1">
               <Label className="text-sm font-medium">Title</Label>
               <Input
                 placeholder="Enter ticket title"
-                value={form.title}
-                onChange={(e) =>
-                  setForm({ ...form, title: e.target.value })
-                }
-                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
-                required
+                {...register("title")}
+                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-600"
               />
-              <p className="text-xs text-gray-400">
+              {errors.title && (
+                <p className="text-xs text-red-500 py-1">{errors.title.message}</p>
+              )}
+              <p className="text-xs text-gray-500 py-2">
                 Provide a clear and concise title (5–80 characters)
               </p>
             </div>
@@ -121,14 +128,13 @@ export default function NewTicketPage() {
               <Textarea
                 rows={4}
                 placeholder="Describe the issue in detail"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
-                required
+                {...register("description")}
+                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-600"
               />
-              <p className="text-xs text-gray-400">
+              {errors.description && (
+                <p className="text-xs text-red-500 py-1">{errors.description.message}</p>
+              )}
+              <p className="text-xs text-gray-500 py-2">
                 Provide detailed information about the issue (min 20 characters)
               </p>
             </div>
@@ -138,13 +144,8 @@ export default function NewTicketPage() {
               <div className="space-y-1">
                 <Label className="text-sm font-medium">Status</Label>
                 <Select
-                  value={form.status}
-                  onValueChange={(value) =>
-                    setForm({
-                      ...form,
-                      status: value as CreateTicketPayload["status"],
-                    })
-                  }
+                  defaultValue="open"
+                  onValueChange={(v) => setValue("status", v as CreateTicketForm["status"])}
                 >
                   <SelectTrigger className="bg-gray-50">
                     <SelectValue />
@@ -155,15 +156,16 @@ export default function NewTicketPage() {
                     <SelectItem value="resolved">Resolved</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.status && (
+                  <p className="text-xs text-red-500 py-1">{errors.status.message}</p>
+                )}
               </div>
 
               <div className="space-y-1">
                 <Label className="text-sm font-medium">Priority</Label>
                 <Select
-                  value={form.priority.toString()}
-                  onValueChange={(value) =>
-                    setForm({ ...form, priority: Number(value) })
-                  }
+                  defaultValue="3"
+                  onValueChange={(v) => setValue("priority", Number(v))}
                 >
                   <SelectTrigger className="bg-gray-50">
                     <SelectValue />
@@ -176,23 +178,24 @@ export default function NewTicketPage() {
                     <SelectItem value="5">5 - Critical</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.priority && (
+                  <p className="text-xs text-red-500 py-1">{errors.priority.message}</p>
+                )}
               </div>
             </div>
 
             {/* Assignee */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium">
-                Assignee (Optional)
-              </Label>
+              <Label className="text-sm font-medium">Assignee (Optional)</Label>
               <Input
                 placeholder="Assign to team member"
-                value={form.assignee}
-                onChange={(e) =>
-                  setForm({ ...form, assignee: e.target.value })
-                }
-                      className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-300"
+                {...register("assignee")}
+                className="bg-[#f5f5f5] h-9 text-[14px] text-gray-800 placeholder:text-gray-600"
               />
-              <p className="text-xs text-gray-400">
+              {errors.assignee && (
+                <p className="text-xs text-red-500 py-1">{errors.assignee.message}</p>
+              )}
+              <p className="text-xs text-gray-500 py-2">
                 Leave empty if not assigned yet
               </p>
             </div>
@@ -204,20 +207,20 @@ export default function NewTicketPage() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">
-    <Button
-  type="submit"
-  disabled={loading}
-  className="px-6 bg-black text-white hover:bg-black disabled:bg-black disabled:text-white"
->
-  {loading ? "Creating..." : "Create Ticket"}
-</Button>
-
+              <Button
+                type="submit"
+                disabled={loading}
+                className="px-6 bg-black text-white hover:bg-black disabled:bg-black disabled:text-white"
+              >
+                {loading ? "Creating..." : "Create Ticket"}
+              </Button>
 
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                className="border-none focus:ring-0 focus:outline-none">
+                className="border-none focus:ring-0 focus:outline-none"
+              >
                 Cancel
               </Button>
             </div>

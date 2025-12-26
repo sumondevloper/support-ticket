@@ -1,4 +1,3 @@
-// components/ui/sonner.tsx
 import * as React from "react";
 import { Toaster as Sonner } from "sonner";
 
