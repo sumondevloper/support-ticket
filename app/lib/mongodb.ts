@@ -1,6 +1,6 @@
 import { MongoClient, MongoClientOptions } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = "mongodb+srv://sumonchakraborty414_db_user:TIw6mo4vWtujjZa1@cluster0.6liakct.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0";
 const MONGODB_DB = process.env.MONGODB_DB || "test";
 
 if (!MONGODB_URI) {
