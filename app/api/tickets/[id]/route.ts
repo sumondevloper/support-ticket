@@ -13,8 +13,9 @@ async function getTicketId(params: Promise<{ id: string }>) {
     throw new Error("Invalid ticket ID format");
   }
 
-  return id;
+  return new ObjectId(id);  // ObjectId রিটার্ন করুন
 }
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -37,15 +38,9 @@ export async function POST(req: NextRequest) {
     const client = await clientPromise;
     const db = client.db("test");
 
-    let ticket = await db.collection("tickets").findOne({
-      _id: new ObjectId(id),
+    const ticket = await db.collection("tickets").findOne({
+      _id: new ObjectId(id),  // সবসময় ObjectId দিয়ে সার্চ করুন
     });
-
-    if (!ticket) {
-      ticket = await db.collection("tickets").findOne({
-        _id: id,
-      });
-    }
 
     if (!ticket) {
       return NextResponse.json(
@@ -63,6 +58,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -105,10 +101,14 @@ export async function PATCH(
     const db = client.db("test");
 
     const result = await db.collection("tickets").findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) },  // সবসময় ObjectId
       { $set: { ...body, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
+
+    if (!result) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
 
     return NextResponse.json({ ticket: result }, { status: 200 });
   } catch (error: any) {
@@ -119,27 +119,20 @@ export async function PATCH(
     );
   }
 }
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = await getTicketId(params);
+    const objectId = await getTicketId(params);  // ObjectId পান
 
     const client = await clientPromise;
     const db = client.db("test");
 
-    let result = await db.collection("tickets").findOneAndDelete({
-      _id: id,
+    const result = await db.collection("tickets").findOneAndDelete({
+      _id: objectId,  // সবসময় ObjectId দিয়ে ডিলিট করুন
     });
-
-
-    if (!result) {
-      result = await db.collection("tickets").findOneAndDelete({
-        _id: new ObjectId(id),
-      });
-      console.log("DELETE - ObjectId search result:", result); // Debug log
-    }
 
     if (!result) {
       return NextResponse.json(
