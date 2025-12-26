@@ -34,14 +34,39 @@ import {
 import { AlertTriangle, CalendarDays, ChevronLeft, SquarePen, Trash, Users } from "lucide-react";
 import Loading from "./loading";
 
-const fetchTicket = async (id: string) => {
+// Ticket type definition
+interface Ticket {
+  _id: string;
+  title: string;
+  description?: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'close';
+  priority: number;
+  assignee?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TicketResponse {
+  ticket: Ticket;
+}
+
+// fetchTicket function with proper type checking
+const fetchTicket = async (id: string | undefined): Promise<TicketResponse> => {
+  if (!id) {
+    throw new Error("Ticket ID is required");
+  }
+
   const res = await fetch("/api/tickets/get-by-id", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
   });
 
-  if (!res.ok) throw new Error("Failed to fetch ticket");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Failed to fetch ticket" }));
+    throw new Error(errorData.error || "Failed to fetch ticket");
+  }
+
   return res.json();
 };
 
@@ -49,10 +74,13 @@ export const updateTicket = async ({
   id,
   data,
 }: {
-  id: string;
+  id: string | undefined;
   data: Partial<UpdateTicketInput>;
 }) => {
-  if (!id) throw new Error("Ticket ID is required");
+  if (!id) {
+    throw new Error("Ticket ID is required");
+  }
+  
   const res = await fetch(`/api/tickets/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -61,26 +89,37 @@ export const updateTicket = async ({
   });
 
   let responseData;
-  try { responseData = await res.json(); } 
-  catch { responseData = { error: "Invalid response from server" }; }
+  try { 
+    responseData = await res.json(); 
+  } 
+  catch { 
+    responseData = { error: "Invalid response from server" }; 
+  }
 
   if (!res.ok) {
     throw new Error(responseData?.error || responseData?.details || `Update failed (${res.status})`);
   }
 
-  return responseData.ticket;
+  return responseData.ticket as Ticket;
 };
 
-export const deleteTicket = async (id: string) => {
-  if (!id) throw new Error("Ticket ID is required");
+export const deleteTicket = async (id: string | undefined) => {
+  if (!id) {
+    throw new Error("Ticket ID is required");
+  }
+  
   const res = await fetch(`/api/tickets/${id}`, {
     method: "DELETE",
     cache: "no-store",
   });
 
   let responseData;
-  try { responseData = await res.json(); } 
-  catch { responseData = { error: "Invalid response from server" }; }
+  try { 
+    responseData = await res.json(); 
+  } 
+  catch { 
+    responseData = { error: "Invalid response from server" }; 
+  }
 
   if (!res.ok) {
     throw new Error(responseData?.error || responseData?.details || "Delete failed");
@@ -93,41 +132,69 @@ export default function TicketDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  // Get id with proper type handling
+  const rawId = params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
-    queryFn: () => fetchTicket(id),
-    enabled: !!id,
+    queryFn: () => {
+      // Ensure id is string before calling fetchTicket
+      if (!id || typeof id !== 'string') {
+        throw new Error("Invalid ticket ID");
+      }
+      return fetchTicket(id);
+    },
+    enabled: !!id && typeof id === 'string',
   });
 
   const ticket = data?.ticket;
 
   const updateMutation = useMutation({
-    mutationFn: (data: UpdateTicketInput) => updateTicket({ id, data }),
+    mutationFn: (data: UpdateTicketInput) => {
+      if (!id) {
+        throw new Error("Ticket ID is required");
+      }
+      return updateTicket({ id, data });
+    },
     onSuccess: () => {
       toast.success("Ticket updated");
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["ticket", id] });
       setIsEditOpen(false);
     },
-    onError: () => toast.error("Update failed"),
+    onError: (error: Error) => {
+      toast.error(error.message || "Update failed");
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteTicket(id),
+    mutationFn: () => {
+      if (!id) {
+        throw new Error("Ticket ID is required");
+      }
+      return deleteTicket(id);
+    },
     onSuccess: () => {
       toast.success("Ticket deleted");
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       router.push("/tickets");
     },
-    onError: () => toast.error("Delete failed"),
+    onError: (error: Error) => {
+      toast.error(error.message || "Delete failed");
+    },
   });
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<UpdateTicketInput>({
+  const { 
+    register, 
+    handleSubmit, 
+    setValue, 
+    formState: { errors, isSubmitting } 
+  } = useForm<UpdateTicketInput>({
     resolver: zodResolver(updateTicketSchema),
     values: ticket ? {
       title: ticket.title,
@@ -214,21 +281,41 @@ export default function TicketDetailsPage() {
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <div className="space-y-0.5">
                     <Label className="text-[13px]">Title</Label>
-                    <Input {...register("title")} className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" placeholder="Enter ticket title" />
+                    <Input 
+                      {...register("title")} 
+                      className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" 
+                      placeholder="Enter ticket title" 
+                    />
+                    {errors.title && (
+                      <p className="text-[11px] text-red-500">{errors.title.message}</p>
+                    )}
                     <p className="text-[11px] text-muted-foreground pb-2.5 pt-1.5">Provide a clear and concise title (5–80 characters)</p>
                   </div>
 
                   <div className="space-y-0.5">
                     <Label className="text-[13px]">Description</Label>
-                    <Textarea {...register("description")} rows={3} className="bg-[#f5f5f5] min-h-[72px] text-[13px] text-gray-800 placeholder:text-gray-600" placeholder="Describe the issue in detail" />
+                    <Textarea 
+                      {...register("description")} 
+                      rows={3} 
+                      className="bg-[#f5f5f5] min-h-[72px] text-[13px] text-gray-800 placeholder:text-gray-600" 
+                      placeholder="Describe the issue in detail" 
+                    />
+                    {errors.description && (
+                      <p className="text-[11px] text-red-500">{errors.description.message}</p>
+                    )}
                     <p className="text-[11px] text-muted-foreground pb-2.5 pt-1.5">Provide detailed information about the issue (min 20 characters)</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-0.5">
                       <Label className="text-[13px]">Status</Label>
-                      <Select defaultValue={ticket.status} onValueChange={(v) => setValue("status", v as any)}>
-                        <SelectTrigger className="bg-[#f5f5f5] border-none h-9"><SelectValue /></SelectTrigger>
+                      <Select 
+                        defaultValue={ticket.status} 
+                        onValueChange={(v) => setValue("status", v as UpdateTicketInput['status'])}
+                      >
+                        <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
                           <SelectItem value="in_progress">In Progress</SelectItem>
@@ -236,12 +323,20 @@ export default function TicketDetailsPage() {
                           <SelectItem value="close">Close</SelectItem>
                         </SelectContent>
                       </Select>
+                      {errors.status && (
+                        <p className="text-[11px] text-red-500">{errors.status.message}</p>
+                      )}
                     </div>
 
                     <div className="space-y-0.5">
                       <Label className="text-[13px]">Priority</Label>
-                      <Select defaultValue={ticket.priority.toString()} onValueChange={(v) => setValue("priority", Number(v))}>
-                        <SelectTrigger className="bg-[#f5f5f5] border-none h-9"><SelectValue /></SelectTrigger>
+                      <Select 
+                        defaultValue={ticket.priority.toString()} 
+                        onValueChange={(v) => setValue("priority", Number(v))}
+                      >
+                        <SelectTrigger className="bg-[#f5f5f5] border-none h-9">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1 - Very Low</SelectItem>
                           <SelectItem value="2">2 - Low</SelectItem>
@@ -250,20 +345,41 @@ export default function TicketDetailsPage() {
                           <SelectItem value="5">5 - Critical</SelectItem>
                         </SelectContent>
                       </Select>
+                      {errors.priority && (
+                        <p className="text-[11px] text-red-500">{errors.priority.message}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="pt-2.5">
                     <Label className="text-[13px]">Assignee (Optional)</Label>
-                    <Input {...register("assignee")} placeholder="Assignee a team member" className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" />
+                    <Input 
+                      {...register("assignee")} 
+                      placeholder="Assignee a team member" 
+                      className="bg-[#f5f5f5] h-9 text-[13px] text-gray-800 placeholder:text-gray-600" 
+                    />
+                    {errors.assignee && (
+                      <p className="text-[11px] text-red-500">{errors.assignee.message}</p>
+                    )}
                     <p className="text-[11px] text-muted-foreground pt-1.5 pb-3.5">Leave empty if not assigned yet</p>
                   </div>
 
                   <div className="flex gap-3 pt-1">
-                    <Button type="submit" disabled={updateMutation.isPending} className="bg-black text-white hover:bg-black h-9 px-4">
+                    <Button 
+                      type="submit" 
+                      disabled={updateMutation.isPending} 
+                      className="bg-black text-white hover:bg-black h-9 px-4"
+                    >
                       {updateMutation.isPending ? "Updating..." : "Update Ticket"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="border-none h-9 px-4">Cancel</Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsEditOpen(false)} 
+                      className="border-none h-9 px-4"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -282,12 +398,18 @@ export default function TicketDetailsPage() {
                 </DialogHeader>
                 <p className="py-2">This action cannot be undone.</p>
                 <DialogFooter className="flex gap-2">
-                  <Button  onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={() => deleteMutation.mutate()} className="bg-black text-white hover:bg-black/90">Delete</Button>
+                  <Button onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => deleteMutation.mutate()} 
+                    className="bg-black text-white hover:bg-black/90"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
           </div>
         </div>
 

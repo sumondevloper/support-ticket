@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 
-// params থেকে id বের করার helper function
 async function getObjectId(params: Promise<{ id: string }>) {
   const { id } = await params;
   if (!id) throw new Error("Ticket ID is missing");
@@ -10,7 +9,6 @@ async function getObjectId(params: Promise<{ id: string }>) {
   return new ObjectId(id);
 }
 
-// GET-এর মতো কাজ করে (POST দিয়ে fetch করছেন)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
