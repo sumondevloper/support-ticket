@@ -50,7 +50,6 @@ interface TicketResponse {
   ticket: Ticket;
 }
 
-// Helper function to handle assignee value
 const normalizeAssignee = (assignee: string | null | undefined): string | null => {
   if (assignee === undefined || assignee === "") {
     return null;
@@ -58,7 +57,6 @@ const normalizeAssignee = (assignee: string | null | undefined): string | null =
   return assignee;
 };
 
-// fetchTicket function with proper type checking
 const fetchTicket = async (id: string | undefined): Promise<TicketResponse> => {
   if (!id) {
     throw new Error("Ticket ID is required");
@@ -141,7 +139,6 @@ export default function TicketDetailsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   
-  // Get id with proper type handling
   const rawId = params.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
@@ -151,7 +148,6 @@ export default function TicketDetailsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
     queryFn: () => {
-      // Ensure id is string before calling fetchTicket
       if (!id || typeof id !== 'string') {
         throw new Error("Invalid ticket ID");
       }
@@ -180,7 +176,6 @@ export default function TicketDetailsPage() {
     },
   });
 
-  // Reset form when ticket data changes
   useEffect(() => {
     if (ticket) {
       reset({
@@ -198,7 +193,6 @@ export default function TicketDetailsPage() {
       if (!id) {
         throw new Error("Ticket ID is required");
       }
-      // Filter out undefined values
       const updateData: Partial<UpdateTicketInput> = {};
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
@@ -298,7 +292,6 @@ export default function TicketDetailsPage() {
           </div>
 
           <div className="flex gap-2">
-            {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="outline" className="border-gray-300 hover:border-gray-400">
@@ -421,7 +414,6 @@ export default function TicketDetailsPage() {
               </DialogContent>
             </Dialog>
 
-            {/* Delete Dialog */}
             <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="outline" className="border-gray-300 hover:border-gray-300">

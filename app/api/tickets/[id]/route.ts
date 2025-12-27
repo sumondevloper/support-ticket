@@ -45,10 +45,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH request handler - Next.js 14 App Router compatible
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // context ব্যবহার করুন
+  context: { params: Promise<{ id: string }> } 
 ) {
   try {
     const { params } = context;
@@ -88,10 +87,9 @@ export async function PATCH(
   }
 }
 
-// DELETE request handler - Next.js 14 App Router compatible
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // context ব্যবহার করুন
+  context: { params: Promise<{ id: string }> } 
 ) {
   try {
     const { params } = context;
@@ -119,7 +117,6 @@ export async function DELETE(
   }
 }
 
-// Optional: GET method যোগ করতে পারেন যদি চান
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
